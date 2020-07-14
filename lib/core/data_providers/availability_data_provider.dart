@@ -81,6 +81,15 @@ class AvailabilityDataProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+/*
+  Widget buildCardsList(BuildContext context) {
+    // TODO: Resolve cardOrder issues from 62-808
+    return ReorderableListView(
+      children: createList(context),
+      onReorder: _onReorder,
+    );
+  }
+  */
   List<AvailabilityModel> makeOrderedList(List<String> order) {
     if (order == null) {
       return _availabilityModels.values.toList();
@@ -112,12 +121,12 @@ class AvailabilityDataProvider extends ChangeNotifier {
   void toggleLocation(String location) {
     if (_locationViewState[location] ?? true) {
       _locationViewState[location] = false;
-      _userDataProvider.userProfileModel.selectedOccuspaceLocations
-          .remove(location);
+      _userDataProvider
+          .updateUserProfileModel(_userDataProvider.userProfileModel);
     } else {
       _locationViewState[location] = true;
-      _userDataProvider.userProfileModel.selectedOccuspaceLocations
-          .add(location);
+      _userDataProvider
+          .updateUserProfileModel(_userDataProvider.userProfileModel);
     }
     notifyListeners();
   }
