@@ -81,15 +81,6 @@ class AvailabilityDataProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-/*
-  Widget buildCardsList(BuildContext context) {
-    // TODO: Resolve cardOrder issues from 62-808
-    return ReorderableListView(
-      children: createList(context),
-      onReorder: _onReorder,
-    );
-  }
-  */
   List<AvailabilityModel> makeOrderedList(List<String> order) {
     if (order == null) {
       return _availabilityModels.values.toList();
