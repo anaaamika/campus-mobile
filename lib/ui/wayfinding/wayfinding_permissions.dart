@@ -77,7 +77,11 @@ class _AdvancedWayfindingPermissionState
                       onChanged: (permissionGranted) {
                         _wayfindingProvider.startBluetooth(
                             context, permissionGranted);
+                        print("force off after startBluetooth: ${_wayfindingProvider.forceOff}");
+                        print("wayfinding enabled after startBluetooth: ${_wayfindingProvider.advancedWayfindingEnabled}");
                         if (_wayfindingProvider.forceOff) {
+//                          print(_wayfindingProvider.userLatitude);
+//                          print(_wayfindingProvider.userLongitude);
                           showDialog(
                               context: context,
                               barrierDismissible: false,
@@ -87,7 +91,7 @@ class _AdvancedWayfindingPermissionState
                                     title: Text(
                                         "UCSD Mobile would like to use Bluetooth."),
                                     content: Text(
-                                        "This feature use Bluetooth to connect with other devices."),
+                                        "This feature uses Bluetooth to connect with other devices."),
                                     actions: <Widget>[
                                       FlatButton(
                                         child: Text('Cancel'),
@@ -108,7 +112,7 @@ class _AdvancedWayfindingPermissionState
                                   title: Text(
                                       "UCSD Mobile would like to use Bluetooth."),
                                   content: Text(
-                                      "This feature use Bluetooth to connect with other devices."),
+                                      "This feature uses Bluetooth to connect with other devices."),
                                   actions: <Widget>[
                                     FlatButton(
                                       child: Text('Cancel'),

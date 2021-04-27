@@ -85,6 +85,7 @@ List<SingleChildWidget> independentServices = [
       print("CreateProvider: Coordinates (LocationDataProvider)");
       return LocationDataProvider().locationStream;
     },
+    lazy: false,
   ),
   ChangeNotifierProvider<CustomAppBar>(
     create: (_) {
@@ -261,15 +262,15 @@ List<SingleChildWidget> dependentServices = [
     availabilityDataProvider.userDataProvider = userDataProvider;
     return availabilityDataProvider;
   }),
-  ChangeNotifierProxyProvider<UserDataProvider, ShuttleDataProvider>(
-      create: (_) {
-    print("CreateProvider: ShuttleDataProvider");
+  ChangeNotifierProxyProvider2<Coordinates, UserDataProvider,
+      ShuttleDataProvider>(create: (_) {
     var shuttleDataProvider = ShuttleDataProvider();
-    shuttleDataProvider.fetchStops(reloading: false);
     return shuttleDataProvider;
-  }, update: (_, userDataProvider, shuttleDataProvider) {
-    print("UpdateProvider: ShuttleDataProvider");
+  }, update: (_, coordinates, userDataProvider, shuttleDataProvider) {
+    print("UpdateProvider: shuttleDataProvider");
+    shuttleDataProvider.userCoords = coordinates;
     shuttleDataProvider.userDataProvider = userDataProvider;
+    shuttleDataProvider.fetchStops(true);
     return shuttleDataProvider;
   }),
   ChangeNotifierProxyProvider<UserDataProvider, ParkingDataProvider>(

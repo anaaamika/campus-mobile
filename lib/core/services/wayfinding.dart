@@ -13,7 +13,7 @@ class WayfindingService {
   final String deviceTypesEndpoint =
       "https://api-qa.ucsd.edu:8243/bluetoothdevicecharacteristic/v1.0.0/servicenames/1";
   final String mobileLoggerEndpoint =
-      "https://api-qa.ucsd.edu:8243/mobileapplogger/v1.0.0/log";
+      "https://api-qa.ucsd.edu:8243/mobileapplogger/v1.1.0/log?type=WAYFINDING";
   final Map<String, String> publicHeader = {
     "accept": "application/json",
   };

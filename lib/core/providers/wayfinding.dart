@@ -15,9 +15,9 @@ import 'package:campus_mobile_experimental/core/services/wayfinding.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_blue/flutter_blue.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
-import 'package:location/location.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:campus_mobile_experimental/core/models/wayfinding_constants.dart';
+import 'package:campus_mobile_experimental/core/utils/maps.dart';
 
 import 'bluetooth.dart';
 /// A file that handles AdvancedWayfinding feature to scan and identify nearby BT devices.
@@ -55,6 +55,8 @@ class WayfindingProvider extends ChangeNotifier {
 
   /// Provides location of device for logging scans.
   Coordinates _coordinates;
+  double userLatitude;
+  double userLongitude;
 
   /// Keeps track of scanned unique BT devices.
   HashMap<String, BluetoothDeviceProfile> scannedObjects = new HashMap();
@@ -88,9 +90,6 @@ class WayfindingProvider extends ChangeNotifier {
 
   /// Gives an unfiltered list of scanned devices.
   static List<List<Object>> unprocessedDevices = [];
-
-  /// Initialize location and permissions to be checked
-  Location location = Location();
 
   /// Accesses user's profile to retrieve necessary tokens.
   UserDataProvider userDataProvider;
@@ -128,10 +127,7 @@ class WayfindingProvider extends ChangeNotifier {
           // Set up background scanning
           backgroundFetchSetUp();
 
-          // Set the minimum change to activate a new scan.
-          location.changeSettings(accuracy: LocationAccuracy.low);
-
-          // Enable location listening
+          // Set [userLatitude] and [userLongitude], enable location listening
           checkLocationPermission();
 
           // Enable continuous scan
@@ -147,8 +143,9 @@ class WayfindingProvider extends ChangeNotifier {
     startScan();
 
     // Enable timer and  wait duration before starting next scan.
+    // !!!!!!!! reset duration to minutes: _wayfindingConstantsModel.scanWaitTime
     ongoingScanner = new Timer.periodic(
-        Duration(minutes: _wayfindingConstantsModel.scanWaitTime), (Timer t) => startScan());
+        Duration(seconds: 10), (Timer t) => startScan());
   }
 
   /// Scans for BT LE devices and processes them to send to ITS specified destination.
@@ -156,13 +153,11 @@ class WayfindingProvider extends ChangeNotifier {
   /// Short circuits when not within ITS defined distance of UCSD.
   startScan() async {
     //Ensure that we are still within X miles of Price Center
-    await location.getLocation().then((location) {
-      _wayfindingConstantsModel.userDistanceFromPriceCenter = getHaversineDistance(
-          _wayfindingConstantsModel.pcLatitude, _wayfindingConstantsModel.pcLongitude, location.latitude, location.longitude);
+    _wayfindingConstantsModel.userDistanceFromPriceCenter = getHaversineDistance(
+        _wayfindingConstantsModel.pcLatitude, _wayfindingConstantsModel.pcLongitude, userLatitude, userLongitude);
 
-      // Convert km to miles
-      _wayfindingConstantsModel.userDistanceFromPriceCenter = _wayfindingConstantsModel.userDistanceFromPriceCenter / 1.609;
-    });
+    // Convert km to miles
+    _wayfindingConstantsModel.userDistanceFromPriceCenter = _wayfindingConstantsModel.userDistanceFromPriceCenter / 1.609;
     print("Distance from PC: ${_wayfindingConstantsModel.userDistanceFromPriceCenter}");
     print("Miles from PC: ${_wayfindingConstantsModel.milesFromPC}");
 
@@ -213,31 +208,26 @@ class WayfindingProvider extends ChangeNotifier {
       _storage.deleteAll();
       await _storage.write(
           key: "lastBackgroundScan", value: DateTime.now().toString());
-      double lat;
-      double long;
+
       checkLocationPermission();
-      location.getLocation().then((value) {
-        lat = value.latitude;
-        long = value.longitude;
 
-        // Reset dwell times
-        resetDevices();
-        _wayfindingConstantsModel.qualifyingDevices = 0;
+      // Reset dwell times
+      resetDevices();
+      _wayfindingConstantsModel.qualifyingDevices = 0;
 
-        //LOG VALUE
-        Map log = {
-          "SOURCE_DEVICE_ADVERTISEMENT_ID": this.advertisementValue,
-          "SOURCE": "$operatingSystem-UCSDMobileApp",
-          "OPERATING_SYSTEM": operatingSystem,
-          "LAT": (lat == null) ? 0 : lat,
-          "LONG": (long == null) ? 0 : long,
-          "DEVICE_LIST": newBufferList
-        };
+      //LOG VALUE
+      Map log = {
+        "SOURCE_DEVICE_ADVERTISEMENT_ID": this.advertisementValue,
+        "SOURCE": "$operatingSystem-UCSDMobileApp",
+        "OPERATING_SYSTEM": operatingSystem,
+        "LAT": (userLatitude == null) ? 0 : userLatitude,
+        "LONG": (userLongitude == null) ? 0 : userLongitude,
+        "DEVICE_LIST": newBufferList
+      };
 
-        // Send logs to API
-        sendLogs(log);
-        return;
-      });
+      // Send logs to API
+      sendLogs(log);
+      return;
     }
 
     // Write scannedObjects to storage
@@ -261,29 +251,23 @@ class WayfindingProvider extends ChangeNotifier {
       operatingSystem = "iOS";
     }
     if (_wayfindingConstantsModel.qualifyingDevices >= _wayfindingConstantsModel.qualifiedDevicesThreshold) {
-      double lat;
-      double long;
       checkLocationPermission();
-      location.getLocation().then((value) {
-        lat = value.latitude;
-        long = value.longitude;
 
-        // Reset dwell times
-        resetDevices();
-        _wayfindingConstantsModel.qualifyingDevices = 0;
+      // Reset dwell times
+      resetDevices();
+      _wayfindingConstantsModel.qualifyingDevices = 0;
 
-        //LOG VALUE
-        Map log = {
-          "SOURCE_DEVICE_ADVERTISEMENT_ID": this.advertisementValue,
-          "SOURCE": "$operatingSystem-UCSDMobileApp",
-          "OPERATING_SYSTEM": operatingSystem,
-          "LAT": (lat == null) ? 0 : lat,
-          "LONG": (long == null) ? 0 : long,
-          "DEVICE_LIST": newBufferList
-        };
-        // Send logs to API
-        sendLogs(log);
-      });
+      //LOG VALUE
+      Map log = {
+        "SOURCE_DEVICE_ADVERTISEMENT_ID": this.advertisementValue,
+        "SOURCE": "$operatingSystem-UCSDMobileApp",
+        "OPERATING_SYSTEM": operatingSystem,
+        "LAT": (userLatitude == null) ? 0 : userLatitude,
+        "LONG": (userLongitude == null) ? 0 : userLongitude,
+        "DEVICE_LIST": newBufferList
+      };
+      // Send logs to API
+      sendLogs(log);
     }
   }
 
@@ -651,29 +635,12 @@ class WayfindingProvider extends ChangeNotifier {
     } catch (exception) {}
   }
 
-  // Used to log current user location or enable the location change listener
+  // Used to log current user location
   void checkLocationPermission() async {
-    // Set up new location object to get current location
-    location = Location();
-    location.changeSettings(accuracy: LocationAccuracy.low);
-    PermissionStatus hasPermission;
-    bool _serviceEnabled;
-
-    // check if gps service is enabled
-    _serviceEnabled = await location.serviceEnabled();
-    if (!_serviceEnabled) {
-      _serviceEnabled = await location.requestService();
-      if (!_serviceEnabled) {
-        return;
-      }
-    }
-    //check if permission is granted
-    hasPermission = await location.hasPermission();
-    if (hasPermission == PermissionStatus.denied) {
-      hasPermission = await location.requestPermission();
-      if (hasPermission != PermissionStatus.granted) {
-        return;
-      }
+    userLongitude = (_coordinates == null) ? null : _coordinates.lon;
+    userLatitude = (_coordinates == null) ? null : _coordinates.lat;
+    if (userLongitude == null || userLatitude == null){
+      print("wayfinding enabled when coordinates null");
     }
   }
 
@@ -793,7 +760,6 @@ class WayfindingProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  get coordinate => _coordinates;
   set userProvider(UserDataProvider userDataProvider){
     print("UserProvider set to: ${userDataProvider.isLoggedIn}");
     userDataProvider = userDataProvider;
@@ -812,18 +778,28 @@ class WayfindingProvider extends ChangeNotifier {
         sharedPreferences.setBool(
             "advancedWayfindingEnabled", advancedWayfindingEnabled);
       }
+      print("here! AW enabled: $advancedWayfindingEnabled");
     });
   }
   bool permissionState(BuildContext context, AsyncSnapshot<dynamic> snapshot) {
     checkAdvancedWayfindingEnabled();
+    checkLocationPermission();
+    bool locationOn = false;
+    if (userLatitude != null && userLongitude != null) {
+      locationOn = true;
+    }
     if (snapshot.data as BluetoothState == BluetoothState.unauthorized ||
-        snapshot.data as BluetoothState == BluetoothState.off) {
+        snapshot.data as BluetoothState == BluetoothState.off ||
+        !locationOn) {
       forceOff = true;
       advancedWayfindingEnabled = false;
-    }else{
+    } else{
       forceOff = false;
     }
-    if(advancedWayfindingEnabled) init();
+    if(advancedWayfindingEnabled) {
+      init();
+      print("initialized");
+    }
     return advancedWayfindingEnabled;
   }
 
@@ -843,7 +819,6 @@ class WayfindingProvider extends ChangeNotifier {
   /// forceOff (currently false)
   void startBluetooth(BuildContext context, bool permissionGranted) async {
     if(forceOff) return;
-//    print("wayfinging enabled");
 //    print(advancedWayfindingEnabled);
     if (permissionGranted) {
       init();
@@ -880,24 +855,6 @@ class WayfindingProvider extends ChangeNotifier {
     _storage.deleteAll();
   }
 
-  // From shuttle card
-  double getHaversineDistance(lat1, lon1, lat2, lon2) {
-    var R = 6371; // Radius of the earth in km
-    var dLat = deg2rad(lat2 - lat1); // deg2rad below
-    var dLon = deg2rad(lon2 - lon1);
-    var a = math.sin(dLat / 2) * math.sin(dLat / 2) +
-        math.cos(deg2rad(lat1)) *
-            math.cos(deg2rad(lat2)) *
-            math.sin(dLon / 2) *
-            math.sin(dLon / 2);
-    var c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a));
-    var d = R * c; // Distance in km
-    return d;
-  }
-
-  double deg2rad(deg) {
-    return deg * (math.pi / 180);
-  }
   void setAWPreference(){
     SharedPreferences.getInstance().then((value) {
       value.setBool("advancedWayfindingEnabled", advancedWayfindingEnabled);
